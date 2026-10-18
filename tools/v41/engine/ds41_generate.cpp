@@ -248,8 +248,8 @@ int main(int argc, char ** argv) {
     if (!a.build_mirror.empty()) {   // the second-drive blob mirror (STRATA_BLOB_MIRROR): coldest experts first
         std::string err;
         if (a.mirror_gib < 0) {   // --check-mirror F: open it with every blob compared against the model file
-            setenv("STRATA_BLOB_MIRROR", a.build_mirror.c_str(), 1);
-            setenv("STRATA_BLOB_MIRROR_CHECK", "0", 1);
+            ds41_sys::setenv("STRATA_BLOB_MIRROR", a.build_mirror.c_str(), 1);
+            ds41_sys::setenv("STRATA_BLOB_MIRROR_CHECK", "0", 1);
             Ds41FileBlobs chk(a.model);
             if (!chk.open(err)) { std::fprintf(stderr, "ds41_generate: experts: %s\n", err.c_str()); return 1; }
             return chk.mirrored() > 0 ? 0 : 1;
