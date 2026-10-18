@@ -105,7 +105,12 @@ bool parse(int argc, char ** argv, Args & a) {
         else if (k == "-n" || k == "--n-predict") a.n_predict = std::atoi(next().c_str());
         else if (k == "--backend") a.backend = next();
         else if (k == "--experts") a.experts = next();
+#ifdef _WIN32
+        // the Windows path-list separator: a drive letter's ':' must not split "D:\a;E:\b"
+        else if (k == "--engram") { std::stringstream ss(next()); std::string d; while (std::getline(ss, d, ';')) a.engram.push_back(d); }
+#else
         else if (k == "--engram") { std::stringstream ss(next()); std::string d; while (std::getline(ss, d, ':')) a.engram.push_back(d); }
+#endif
         else if (k == "--slots") { const std::string v = next(); a.slots = v == "auto" ? 0 : std::atoll(v.c_str()); }
         else if (k == "--vram-margin") a.vram_margin_gib = std::atof(next().c_str());
         else if (k == "--arena-gib") a.arena_gib = std::atof(next().c_str());
