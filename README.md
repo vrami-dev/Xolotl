@@ -1,3 +1,54 @@
+# cenote
+
+**DeepSeek-V4.1-Flash on one RTX 3090, natively on Windows. No WSL.**
+
+cenote is a Windows port of the DeepSeek-V4.1 engine in [Xolotl](https://github.com/Indras-Mirror/Xolotl) by
+Indras Mirror. Xolotl runs DeepSeek-V4.1-Flash on one 24 GB GPU by keeping the hottest experts in VRAM, the next tier
+in a pinned RAM arena and the rest on NVMe, and serves it through an OpenAI / Anthropic-compatible API with tool
+calls. Upstream it runs on Linux; cenote builds and serves it with MSVC + CUDA on Windows 11.
+
+> **Credit where it belongs.** The engine, the server, the GSQ quant format and the DeepSeek-V4.1 work are
+> [Xolotl](https://github.com/Indras-Mirror/Xolotl)'s (Indras Mirror), built on [Strata](https://github.com/Niko1221/Strata)
+> (Niko1221) and [ggml / llama.cpp](https://github.com/ggml-org/llama.cpp). The model is DeepSeek's; the quants are
+> IndrasMirror's. **cenote adds only the Windows port, a Windows-only crash fix and settings measured on a 3090.** MIT,
+> with every upstream notice kept. The upstream README follows below, unchanged.
+>
+> Maintained by **vrami** ([@vrami_dev](https://x.com/vrami_dev)), a mascot account run by a real person. The rig and
+> the code are real.
+
+### What cenote changes
+
+- **`tools/v41/engine/ds41_sys.hpp`:** a small portability layer.
+  - Files: positional reads through `CreateFileW` with overlapped I/O, `FILE_FLAG_NO_BUFFERING` for O_DIRECT, 64-bit offsets.
+  - Memory: `_aligned_malloc` / `_aligned_free` pairs; `GlobalMemoryStatusEx` for free RAM.
+  - The Linux paths are unchanged.
+- **MSVC builds:** MSVC forms of the CPU kernels' GCC attributes, an 8 MiB stack reserve for `ds41_generate`, `--engram` folders separated by `;`. The Engram raw-device trick stays Linux-only.
+- **A Windows-only crash, fixed.** Every prompt over 96 tokens corrupted the heap (0xC0000374).
+  - MSVC's linker takes llama.cpp's `mul_mat_q_case<T>` from `ggml-cuda.lib`, which is built with CUDA graphs and so has a larger `ggml_backend_cuda_context`, while `strata_mmq` allocated the smaller struct.
+  - GNU ld keeps `strata_mmq`'s own copy, so Linux never hit it.
+  - Fix: `GGML_CUDA_USE_GRAPHS` for `strata_mmq` (CMakeLists.txt).
+- **Windows tooling:**
+  - `build-win.bat` (6 parallel jobs by default)
+  - serve configs `tools/v41/serve/strata-ds41-win.json` and `strata-ds41-1017-win.json`
+  - a resumable, sha256-checked Hugging Face downloader `tools/xolotl/win_fetch_files.py`
+  - setup steps: [docs/cenote/WINDOWS.md](docs/cenote/WINDOWS.md)
+
+### Numbers
+
+RTX 3090 24 GB (PCIe 4.0 x16), Ryzen 7 5800X, 128 GB DDR4-3200, Windows 11. Model:
+[IndrasMirror/DeepSeek-V4.1-Flash-GSQ-Uncensored](https://huggingface.co/IndrasMirror/DeepSeek-V4.1-Flash-GSQ-Uncensored)
+(September build). Served decode, greedy, 400 tokens, median of 3:
+
+| Config | Prose | Code | Agent JSON | Average |
+| --- | ---: | ---: | ---: | ---: |
+| Xolotl's served config (64 GiB arena) | 13.0 tok/s | 17.4 tok/s | 15.7 tok/s | 15.4 |
+| cenote (72 GiB arena, `STRATA_TIER_BATCH_PCIE=0.75`) | 14.7 tok/s | 22.1 tok/s | 18.8 tok/s | 18.5 |
+
+A fresh 13,294-token prompt read in 63.45 s (209.5 tok/s). The method, every variant tried and the raw results are in
+[docs/cenote/BENCHMARKS.md](docs/cenote/BENCHMARKS.md). DeepSeek-V4.1-Flash-1017 numbers are coming.
+
+---
+
 <p align="center"><img src="docs/brand/assets/readme-header-1200.png" alt="Xolotl - frontier MoE models on one gaming PC" width="100%"></p>
 
 <h1 align="center">Xolotl</h1>
