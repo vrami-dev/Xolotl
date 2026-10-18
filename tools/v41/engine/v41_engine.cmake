@@ -99,6 +99,11 @@ elseif(TARGET ds41_dense AND TARGET ds41_moe_cpu)
     add_executable(ds41_generate ${_v41_dir}/ds41_generate.cpp)
     target_link_libraries(ds41_generate PRIVATE ds41_dense ds41_moe_cpu)
 endif()
+# Windows threads (main and std::thread alike) take the executable's stack reserve, 1 MiB by default; Linux gives 8 MiB.
+# The engine's alloca scratch is sized for Linux, so reserve the same 8 MiB (address space only; committed as used).
+if(MSVC AND TARGET ds41_generate)
+    target_link_options(ds41_generate PRIVATE /STACK:8388608)
+endif()
 # the tier gate on real mixed-tier experts: CPU flavour (no CUDA call) and the CUDA flavour (--gpu)
 if(TARGET ds41_moe_cpu)
     add_executable(test_ds41_moe ${_v41_dir}/test_ds41_moe.cpp)
