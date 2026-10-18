@@ -16,4 +16,6 @@ if /i "%~1"=="configure" (
 )
 set "TARGETS=%*"
 if "%TARGETS%"=="" set "TARGETS=ds41_generate"
-ninja -C build-win -k 0 %TARGETS%
+rem Cap the parallel jobs: each nvcc job can take several GB of RAM, and the default (cores + 2) froze this PC once.
+if "%JOBS%"=="" set "JOBS=6"
+ninja -C build-win -k 0 -j %JOBS% %TARGETS%
